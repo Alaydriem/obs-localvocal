@@ -398,6 +398,12 @@ void set_text_callback(uint64_t possible_end_ts, struct transcription_filter_dat
 		}
 	}
 
+	// A final line in the original language goes to teb (after the word filter,
+	// before any translation).
+	if (result.result == DETECTION_RESULT_SPEECH && gf->teb_sender) {
+		gf->teb_sender->enqueue(str_copy, result.language);
+	}
+
 #ifdef ENABLE_WEBVTT
 	if (result.result == DETECTION_RESULT_SPEECH)
 		send_caption_to_webvtt(possible_end_ts, result, str_copy, *gf);

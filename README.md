@@ -176,6 +176,42 @@ If using CoreML on Apple, it will also automatically download the appropriate Co
 
 Get more models from https://ggml.ggerganov.com/ and [HuggingFace](https://huggingface.co/ggerganov/whisper.cpp/tree/main), follow [the instructions on whisper.cpp](https://github.com/ggerganov/whisper.cpp/tree/master/models) to create your own models or download others such as distilled models.
 
+## Send captions to teb (fork change)
+
+This fork can send every final transcription line, in the original language, to the
+`POST /caption` of a teb publisher. teb puts the lines into its streams as CEA-608
+captions.
+
+Settings (the **Send captions to teb** group of the filter):
+
+- **Send captions to teb**: off by default.
+- **teb URL**: for example `http://10.57.2.6:8088`. The fork adds `/caption`.
+- **teb token**: teb's `control.token`. OBS keeps it in the scene collection JSON as
+  plain text, like the other plugin secrets.
+
+Each line is one request:
+
+```
+POST <teb URL>/caption
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"text": "and that is how you decode a stream key", "final": true, "language": "en", "source": "Mic/Aux"}
+```
+
+- Only final results are sent, never partials, and never translations.
+- `language` is LocalVocal's language, or the detected one when it runs on auto.
+- `source` is the name of the source the filter is on.
+- A background thread sends the lines. It holds at most 8 lines and drops the oldest
+  one when it is full. Each request has a 1 s timeout and is not sent again. A line
+  that fails is dropped with one warning in the OBS log. OBS and LocalVocal never
+  wait for teb.
+- The change is small: `src/teb-caption-sender.{h,cpp}` (no OBS headers), a hook in
+  `set_text_callback()`, and the settings. Its unit test builds without OBS:
+  `cmake -S src/tests/teb-caption-sender -B build_teb_sender_test`, then
+  `cmake --build build_teb_sender_test --config Release` and
+  `ctest --test-dir build_teb_sender_test -C Release`.
+
 ## Building
 
 The plugin was built and tested on Mac OSX (Intel & Apple silicon), Windows (with and without Nvidia CUDA) and Linux.
