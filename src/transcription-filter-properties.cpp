@@ -474,6 +474,16 @@ void add_file_output_group_properties(obs_properties_t *ppts)
 	obs_property_set_modified_callback(file_output_group_prop, file_output_select_changed);
 }
 
+void add_teb_group_properties(obs_properties_t *ppts)
+{
+	obs_properties_t *teb_group = obs_properties_create();
+	obs_properties_add_group(ppts, "send_to_teb", MT_("send_to_teb"), OBS_GROUP_CHECKABLE,
+				 teb_group);
+	obs_properties_add_text(teb_group, "teb_url", MT_("teb_url"), OBS_TEXT_DEFAULT);
+	obs_properties_add_text(teb_group, "teb_token", MT_("teb_token"), OBS_TEXT_PASSWORD);
+	obs_properties_add_text(teb_group, "teb_info", MT_("teb_info"), OBS_TEXT_INFO);
+}
+
 void add_buffered_output_group_properties(obs_properties_t *ppts)
 {
 	// add buffered output options group
@@ -688,6 +698,7 @@ obs_properties_t *transcription_filter_properties(void *data)
 	add_webvtt_group_properties(ppts);
 #endif
 	add_file_output_group_properties(ppts);
+	add_teb_group_properties(ppts);
 	add_buffered_output_group_properties(ppts);
 	add_advanced_group_properties(ppts, gf);
 	add_logging_group_properties(ppts);
@@ -721,6 +732,9 @@ void transcription_filter_defaults(obs_data_t *s)
 	obs_data_set_default_int(s, "log_level", LOG_DEBUG);
 	obs_data_set_default_bool(s, "log_words", false);
 	obs_data_set_default_bool(s, "caption_to_stream", false);
+	obs_data_set_default_bool(s, "send_to_teb", false);
+	obs_data_set_default_string(s, "teb_url", "http://127.0.0.1:8088");
+	obs_data_set_default_string(s, "teb_token", "");
 	obs_data_set_default_string(s, "whisper_model_path", "Whisper Tiny English (74Mb)");
 	obs_data_set_default_string(s, "whisper_language_select", "en");
 	obs_data_set_default_string(s, "subtitle_sources", "none");

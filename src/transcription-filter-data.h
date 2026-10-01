@@ -25,6 +25,7 @@
 #include "whisper-utils/whisper-processing.h"
 #include "whisper-utils/token-buffer-thread.h"
 #include "translation/cloud-translation/translation-cloud.h"
+#include "teb-caption-sender.h"
 
 #define MAX_PREPROC_CHANNELS 10
 #define MAX_WEBVTT_TRACKS 5
@@ -185,6 +186,8 @@ struct transcription_filter_data {
 
 	// Text source to output the subtitles
 	std::string text_source_name;
+	// Posts final original-language lines to teb; reset in transcription_filter_destroy.
+	std::unique_ptr<TebCaptionSender> teb_sender;
 	// Callback to set the text in the output text source (subtitles)
 	std::function<void(const DetectionResultWithText &result)> setTextCallback;
 	// Output file path to write the subtitles

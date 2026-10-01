@@ -162,6 +162,7 @@ target_sources(
           src/transcription-filter-properties.cpp
           src/transcription-filter-utils.cpp
           src/transcription-utils.cpp
+          src/teb-caption-sender.cpp
           src/model-utils/model-downloader.cpp
           src/model-utils/model-downloader-ui.cpp
           src/model-utils/model-infos.cpp

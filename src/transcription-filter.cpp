@@ -132,6 +132,9 @@ struct obs_audio_data *transcription_filter_filter_audio(void *data, struct obs_
 		obs_source_t *parent_source = obs_filter_get_parent(gf->context);
 		if (parent_source != nullptr) {
 			set_source_signals(gf, parent_source);
+			const char *parent_name = obs_source_get_name(parent_source);
+			if (gf->teb_sender && parent_name != nullptr)
+				gf->teb_sender->set_source(parent_name);
 		}
 	}
 
@@ -206,6 +209,9 @@ void transcription_filter_destroy(void *data)
 
 	obs_log(gf->log_level, "filter destroy");
 	shutdown_whisper_thread(gf);
+	// The whisper thread has stopped, so nothing enqueues any more; the sender's
+	// worker joins here, before the filter data is freed.
+	gf->teb_sender.reset();
 
 	if (gf->resampler_to_whisper) {
 		audio_resampler_destroy(gf->resampler_to_whisper);
@@ -272,6 +278,11 @@ void transcription_filter_update(void *data, obs_data_t *s)
 	gf->vad_mode = (int)obs_data_get_int(s, "vad_mode");
 	gf->log_words = obs_data_get_bool(s, "log_words");
 	gf->caption_to_stream = obs_data_get_bool(s, "caption_to_stream");
+	if (gf->teb_sender) {
+		gf->teb_sender->configure(obs_data_get_bool(s, "send_to_teb"),
+					  obs_data_get_string(s, "teb_url"),
+					  obs_data_get_string(s, "teb_token"));
+	}
 #ifdef ENABLE_WEBVTT
 	gf->webvtt_caption_to_stream = obs_data_get_bool(s, "webvtt_caption_to_stream");
 	gf->webvtt_caption_to_recording = obs_data_get_bool(s, "webvtt_caption_to_recording");
@@ -714,6 +725,9 @@ void *transcription_filter_create(obs_data_t *settings, obs_source_t *filter)
 	signal_handler_connect(sh_filter, "enable", enable_callback, gf);
 
 	enumerate_gpu_devices(gf);
+
+	gf->teb_sender = std::make_unique<TebCaptionSender>(
+		[](const std::string &message) { obs_log(LOG_WARNING, "%s", message.c_str()); });
 
 	obs_log(gf->log_level, "run update");
 	// get the settings updated on the filter data struct
