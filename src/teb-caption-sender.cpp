@@ -161,7 +161,7 @@ void TebCaptionSender::configure(bool enabled, const std::string &url, const std
 void TebCaptionSender::set_source(const std::string &source)
 {
 	std::lock_guard<std::mutex> lock(mutex_);
-	source_ = source;
+	source_ = label(source);
 }
 
 bool TebCaptionSender::enqueue(const std::string &text, const std::string &language)
@@ -175,7 +175,7 @@ bool TebCaptionSender::enqueue(const std::string &text, const std::string &langu
 			queue_.pop_front();
 			dropped_oldest = true;
 		}
-		queue_.push_back({text, language, source_});
+		queue_.push_back({text, label(language), source_});
 	}
 	wake_.notify_one();
 	if (dropped_oldest) {
@@ -259,6 +259,28 @@ std::string TebCaptionSender::valid_utf8(const std::string &text)
 			out += REPLACEMENT_CHARACTER;
 			at += 1;
 		}
+	}
+	return out;
+}
+
+std::string TebCaptionSender::label(const std::string &value)
+{
+	const std::string text = valid_utf8(value);
+	std::string out;
+	size_t kept = 0;
+	size_t at = 0;
+	while (at < text.size() && kept < MAX_LABEL_CHARS) {
+		const unsigned char lead = static_cast<unsigned char>(text[at]);
+		const size_t length = utf8_length(lead);
+		const unsigned char next = length > 1 ? static_cast<unsigned char>(text[at + 1])
+						      : 0;
+		// C0 controls, DEL, and the C1 controls U+0080 to U+009F.
+		const bool control = lead < 0x20 || lead == 0x7F || (lead == 0xC2 && next < 0xA0);
+		if (!control) {
+			out.append(text, at, length);
+			kept++;
+		}
+		at += length;
 	}
 	return out;
 }

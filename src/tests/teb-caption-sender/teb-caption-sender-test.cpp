@@ -209,6 +209,32 @@ static void stop_during_a_send_returns_within_the_timeout_and_warns_nothing()
 	CHECK(warnings.copy().empty());
 }
 
+static void a_long_or_odd_label_is_cut_to_what_teb_accepts()
+{
+	// teb refuses the whole line when language or source holds more than 64
+	// characters or a control character.
+	CHECK(TebCaptionSender::label(std::string(70, 'x')) == std::string(64, 'x'));
+	std::string wide;
+	for (int n = 0; n < 70; n++)
+		wide += "\xC3\xA9";
+	std::string wide_64;
+	for (int n = 0; n < 64; n++)
+		wide_64 += "\xC3\xA9";
+	CHECK(TebCaptionSender::label(wide) == wide_64);
+	CHECK(TebCaptionSender::label("Mic\nAux\t1\x7F\xC2\x85") == "MicAux1");
+	LocalHttpListener listener;
+	Warnings warnings;
+	TebCaptionSender sender(warnings.callback());
+	sender.configure(true, listener.url(), TOKEN);
+	sender.set_source(std::string(80, 's'));
+	CHECK(sender.enqueue("hello", "en\n"));
+	CHECK(wait_until([&] { return sender.sent() == 1; }, 3000ms));
+	auto requests = listener.requests();
+	CHECK(requests.size() == 1 &&
+	      requests[0].body ==
+		      TebCaptionSender::json_body({"hello", "en", std::string(64, 's')}));
+}
+
 int main()
 {
 	a_line_is_posted_as_json_with_the_bearer_token();
@@ -220,6 +246,7 @@ int main()
 	a_non_2xx_answer_is_one_failure_and_no_retry();
 	a_full_queue_drops_the_oldest_line();
 	stop_during_a_send_returns_within_the_timeout_and_warns_nothing();
+	a_long_or_odd_label_is_cut_to_what_teb_accepts();
 	if (failures == 0)
 		std::printf("teb-caption-sender: all checks passed\n");
 	return failures == 0 ? 0 : 1;

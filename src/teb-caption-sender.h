@@ -28,6 +28,7 @@ public:
 
 	static constexpr size_t QUEUE_LIMIT = 8;
 	static constexpr long REQUEST_TIMEOUT_MS = 1000;
+	static constexpr size_t MAX_LABEL_CHARS = 64;
 
 	explicit TebCaptionSender(WarningCallback warn);
 	~TebCaptionSender();
@@ -52,6 +53,9 @@ public:
 	static std::string json_body(const TebCaptionLine &line);
 	static std::string endpoint(const std::string &base_url);
 	static std::string valid_utf8(const std::string &text);
+	// A language or source as teb accepts it: valid UTF-8, no control characters,
+	// and at most MAX_LABEL_CHARS code points.
+	static std::string label(const std::string &value);
 
 private:
 	void run();
